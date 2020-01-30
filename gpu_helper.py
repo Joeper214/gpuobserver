@@ -60,7 +60,7 @@ def update_users(info):
 
         cache['users'][user]['inc'] += 1
         cache['users'][user]['time'] += config.update_interval
-        pwr_float = float(info['power_draw'][:-2])
+        pwr_float = float(info['power_draw'][:-2]) if isinstance(info['power_draw'][:-2], float) else 0
         cache['users'][user]['cum_energy'] += pwr_float * config.update_interval.total_seconds() / 3600
         gpu_util = float(info['gpu_util'][:-2])
         cache['users'][user]['cum_util'] += gpu_util
@@ -101,10 +101,10 @@ def get_gpu_infos(ssh):
             users_by_pid = get_users_by_pid(ps_output)
 
             users = set((users_by_pid[pid] for pid in pids))
-            real_users = [pwd.getpwnam(user).pw_gecos.split(',')[0] for user in users]
+            # real_users = [pwd.getpwnam(user).pw_gecos.split(',')[0] for user in users]
 
             info['users'] = users
-            info['real_users'] = real_users
+            info['real_users'] = users
 
             update_users(info)
 
@@ -116,7 +116,7 @@ def get_gpu_infos(ssh):
 def get_remote_info(server):
     # returns gpu information from cache
     tstring = cache['servers'][server]['time'].strftime('%d.%m.%Y %H:%M:%S')
-    logger.info(f'Using cache for {server} from {tstring}')
+    # logger.info(f'Using cache for {server} from {tstring}')
 
     return cache['servers'][server]['info']
 
@@ -127,7 +127,7 @@ def update_cache(interval):
     for server in config.servers:
         try:
             logging.info(f'loading server {server}')
-            config.ssh.connect(server, username=config.user, password=config.key)
+            config.ssh.connect(server, username=config.user, key_filename=config.key)
             try:
                 cache['servers'][server]['info'] = get_gpu_infos(config.ssh)
                 cache['servers'][server]['time'] = datetime.now()
